@@ -1,7 +1,10 @@
 import axios from "axios";
 
+// Create a centralized Axios instance.
+// It will read the VITE_API_BASE_URL from your .env.development file
+// and use it as the base for all API requests.
 const apiClient = axios.create({
-  baseURL: "http://127.0.0.1:8000/api",
+  baseURL: import.meta.env.VITE_API_BASE_URL,
 });
 
 // Use an interceptor to dynamically add the Authorization header to every request

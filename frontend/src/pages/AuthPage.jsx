@@ -2,67 +2,67 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, Form, Button } from "react-bootstrap";
 import { useAuth } from "../context/AuthContext";
-import apiClient from "../api/axiosConfig";
+import apiClient from "../api/axiosConfig"; // ✅ THE CRUCIAL IMPORT
 
 const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [form, setForm] = useState({ name: "", phone: "", password: "" });
   const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { user, login, loading } = useAuth(); // Get user and loading state from context
+  const { user, login, loading: authLoading } = useAuth();
 
-  // ✅ This effect handles redirection for already logged-in users.
+  // Redirect if already logged in
   useEffect(() => {
-    // Don't do anything while the context is still checking the user's auth status.
-    if (loading) {
-      return;
-    }
-
-    // If the auth check is complete and a user exists, redirect them.
+    if (authLoading) return;
     if (user) {
-      if (user.role === "admin") {
-        navigate("/admin");
-      } else if (user.role === "group_manager") {
-        navigate("/manager");
-      } else {
-        navigate("/user");
-      }
+      if (user.role === "admin") navigate("/admin");
+      else if (user.role === "group_manager") navigate("/manager");
+      else navigate("/user");
     }
-  }, [user, loading, navigate]); // Rerun this effect if user, loading, or navigate changes.
+  }, [user, authLoading, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     const endpoint = isLogin ? "/login" : "/register";
+    setMessage("");
+    setLoading(true);
 
     try {
+      // ✅ Using the correct, globally configured apiClient
       const { data } = await apiClient.post(endpoint, form);
-      // The login function from context will handle setting the user and token
       login(data.user, data.token);
-
-      // The useEffect hook above will now handle the redirection automatically
       setMessage("Success! Redirecting...");
+      // The useEffect hook will handle the redirect
     } catch (err) {
-      setMessage(err.response?.data?.message || "An error occurred. Please try again.");
+      if (err.response && err.response.status === 422) {
+        // Handle Laravel's validation errors
+        const errors = err.response.data.errors;
+        const errorMessages = Object.values(errors).flat().join(' ');
+        setMessage(errorMessages);
+      } else if (err.response && err.response.data && err.response.data.message) {
+        // Handle other specific API error messages
+        setMessage(err.response.data.message);
+      } else {
+        // Generic fallback
+        setMessage("An unexpected error occurred. Please try again.");
+      }
+    } finally {
+        setLoading(false);
     }
   };
 
-  // While checking auth or if user is logged in, render nothing.
-  // The useEffect will handle the redirect.
-  if (loading || user) {
-    return null; // Or you could return a loading spinner component
+  // Render nothing while the context is checking for an existing session
+  if (authLoading || user) {
+    return null;
   }
 
-  // Only render the login form if not loading AND there is no user.
   return (
-    <div
-      className="d-flex align-items-center justify-content-center vh-100 bg-light"
-    >
+    <div className="d-flex align-items-center justify-content-center vh-100 bg-light">
       <Card style={{ width: "22rem" }} className="shadow">
         <Card.Body>
-          <h3 className="text-center mb-3">
-            {isLogin ? "Login" : "Register"}
-          </h3>
-          {message && <div className="alert alert-info">{message}</div>}
+          <h3 className="text-center mb-3">{isLogin ? "Login" : "Register"}</h3>
+          {message && <div className="alert alert-danger">{message}</div>}
           <Form onSubmit={handleSubmit}>
             {!isLogin && (
               <Form.Group className="mb-2">
@@ -70,10 +70,9 @@ const AuthPage = () => {
                 <Form.Control
                   type="text"
                   value={form.name}
-                  onChange={(e) =>
-                    setForm({ ...form, name: e.target.value })
-                  }
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
                   required={!isLogin}
+                  disabled={loading}
                 />
               </Form.Group>
             )}
@@ -82,10 +81,9 @@ const AuthPage = () => {
               <Form.Control
                 type="text"
                 value={form.phone}
-                onChange={(e) =>
-                  setForm({ ...form, phone: e.target.value })
-                }
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
                 required
+                disabled={loading}
               />
             </Form.Group>
             <Form.Group className="mb-2">
@@ -93,37 +91,20 @@ const AuthPage = () => {
               <Form.Control
                 type="password"
                 value={form.password}
-                onChange={(e) =>
-                  setForm({ ...form, password: e.target.value })
-                }
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
                 required
+                disabled={loading}
               />
             </Form.Group>
-            <Button type="submit" className="w-100 mt-2" variant="primary">
-              {isLogin ? "Login" : "Register"}
+            <Button type="submit" className="w-100 mt-2" variant="primary" disabled={loading}>
+              {loading ? (isLogin ? 'Logging in...' : 'Registering...') : (isLogin ? "Login" : "Register")}
             </Button>
           </Form>
           <div className="text-center mt-3">
             {isLogin ? (
-              <p>
-                Need an account?{" "}
-                <span
-                  style={{ cursor: "pointer", color: "blue" }}
-                  onClick={() => setIsLogin(false)}
-                >
-                  Register
-                </span>
-              </p>
+              <p>Need an account?{" "}<span style={{ cursor: "pointer", color: "blue" }} onClick={() => setIsLogin(false)}>Register</span></p>
             ) : (
-              <p>
-                Already have an account?{" "}
-                <span
-                  style={{ cursor: "pointer", color: "blue" }}
-                  onClick={() => setIsLogin(true)}
-                >
-                  Login
-                </span>
-              </p>
+              <p>Already have an account?{" "}<span style={{ cursor: "pointer", color: "blue" }} onClick={() => setIsLogin(true)}>Login</span></p>
             )}
           </div>
         </Card.Body>
