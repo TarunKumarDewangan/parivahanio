@@ -11,13 +11,11 @@ const Navbar = () => {
     const [isSearching, setIsSearching] = useState(false);
     const searchRef = useRef(null);
 
-    // Debounce effect for the search API call
     useEffect(() => {
         if (searchQuery.length < 2) {
             setSearchResults([]);
             return;
         }
-
         setIsSearching(true);
         const delayDebounceFn = setTimeout(() => {
             apiClient.get('/global-search', { params: { query: searchQuery } })
@@ -25,11 +23,9 @@ const Navbar = () => {
                 .catch(error => console.error("Search failed:", error))
                 .finally(() => setIsSearching(false));
         }, 300);
-
         return () => clearTimeout(delayDebounceFn);
     }, [searchQuery]);
 
-    // Effect to hide the search dropdown when clicking outside of it
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (searchRef.current && !searchRef.current.contains(event.target)) {
@@ -49,32 +45,16 @@ const Navbar = () => {
     const handleResultClick = (result) => {
         setSearchQuery('');
         setSearchResults([]);
-
         switch(result.type) {
-            case 'citizen':
-                navigate('/citizens');
-                break;
-            case 'vehicle':
-                navigate(`/vehicles/${result.id}/documents`);
-                break;
-            case 'learner_license':
-                navigate('/licenses');
-                break;
-            case 'driving_license':
-                navigate('/driving-licenses');
-                break;
-            case 'permit':
-                // This logic would need to be enhanced if a direct link is needed
-                break;
-            default:
-                navigate('/dashboard'); // Fallback
-                break;
+            case 'citizen': navigate('/citizens'); break;
+            case 'vehicle': navigate(`/vehicles/${result.id}/documents`); break;
+            case 'learner_license': navigate('/licenses'); break;
+            case 'driving_license': navigate('/driving-licenses'); break;
+            default: navigate('/dashboard'); break;
         }
     };
 
-    if (!user) {
-        return null; // Don't render navbar if user is not logged in
-    }
+    if (!user) { return null; }
 
     return (
         <nav className="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
@@ -91,6 +71,10 @@ const Navbar = () => {
                         <li className="nav-item"><NavLink className="nav-link" to="/licenses">Learner Licenses</NavLink></li>
                         <li className="nav-item"><NavLink className="nav-link" to="/driving-licenses">Driving Licenses</NavLink></li>
                         <li className="nav-item"><NavLink className="nav-link" to="/citizens">Citizens</NavLink></li>
+
+                        {/* ✅ NEW WORK TAKEN LINK */}
+                        <li className="nav-item"><NavLink className="nav-link" to="/work-taken">Work Taken</NavLink></li>
+
                         <li className="nav-item"><NavLink className="nav-link" to="/reports">Reports</NavLink></li>
 
                         {user.role === 'admin' && (
@@ -108,16 +92,8 @@ const Navbar = () => {
                         )}
                     </ul>
 
-                    {/* Global Search Bar */}
                     <div className="d-flex mx-auto" style={{ position: 'relative' }} ref={searchRef}>
-                        <input
-                            className="form-control me-2"
-                            type="search"
-                            placeholder="Global Search..."
-                            value={searchQuery}
-                            onChange={e => setSearchQuery(e.target.value)}
-                        />
-                        {/* ✅ FIX: Changed dropdown-menu-dark to dropdown-menu for better contrast */}
+                        <input className="form-control me-2" type="search" placeholder="Global Search..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
                         {(isSearching || searchResults.length > 0 || searchQuery.length >= 2) && (
                             <ul className="dropdown-menu show" style={{ position: 'absolute', top: '100%', width: '100%', zIndex: 1050 }}>
                                 {isSearching && <li className="dropdown-item-text">Searching...</li>}
@@ -134,10 +110,7 @@ const Navbar = () => {
                         )}
                     </div>
 
-                    {/* User Info and Logout */}
-                    <span className="navbar-text ms-auto me-3 d-none d-lg-inline">
-                        Logged in as: <strong>{user.name}</strong> ({user.role})
-                    </span>
+                    <span className="navbar-text ms-auto me-3 d-none d-lg-inline">Logged in as: <strong>{user.name}</strong> ({user.role})</span>
                     <button className="btn btn-outline-light" onClick={handleLogout}>Logout</button>
                 </div>
             </div>

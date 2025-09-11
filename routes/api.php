@@ -6,7 +6,7 @@ use App\Http\Controllers\Api\GroupController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\LearnerLicenseController;
-use App\Http\Controllers\Api\DrivingLicenseController; // ✅ IMPORTED
+use App\Http\Controllers\Api\DrivingLicenseController;
 use App\Http\Controllers\Api\CitizenController;
 use App\Http\Controllers\Api\VehicleController;
 use App\Http\Controllers\Api\FitnessCertificateController;
@@ -18,6 +18,13 @@ use App\Http\Controllers\Api\VehicleTaxController;
 use App\Http\Controllers\Api\VltdController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\GlobalSearchController;
+use App\Http\Controllers\Api\WorkTakenController;
+
+/*
+|--------------------------------------------------------------------------
+| API Routes
+|--------------------------------------------------------------------------
+*/
 
 // --- PUBLIC ROUTES ---
 Route::post('/register', [AuthController::class, 'register']);
@@ -36,17 +43,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // --- Application Features ---
     Route::apiResource('licenses', LearnerLicenseController::class);
-
-    // ✅ NEW DRIVING LICENSE ROUTE
     Route::apiResource('driving-licenses', DrivingLicenseController::class);
-
     Route::apiResource('citizens', CitizenController::class);
+
+    // --- Vehicle & Document Features ---
     Route::get('citizens/{citizen}/vehicles', [VehicleController::class, 'index']);
     Route::post('citizens/{citizen}/vehicles', [VehicleController::class, 'store']);
     Route::apiResource('vehicles', VehicleController::class)->except(['index', 'store']);
     Route::get('vehicles/{vehicle}/details', [VehicleController::class, 'getDetails']);
-
-    // --- Document Features ---
     Route::apiResource('vehicles.fitness_certificates', FitnessCertificateController::class);
     Route::apiResource('vehicles.insurances', InsuranceController::class);
     Route::apiResource('vehicles.permits', PermitController::class);
@@ -55,11 +59,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::apiResource('vehicles.vehicle_taxes', VehicleTaxController::class);
     Route::apiResource('vehicles.vltds', VltdController::class);
 
-    // --- Report Features ---
+    // --- Report & Search Features ---
     Route::get('reports/expiring-documents', [ReportController::class, 'expiringDocuments']);
-
-    Route::get('reports/expiring-documents', [ReportController::class, 'expiringDocuments']);
-
-    // ✅ NEW GLOBAL SEARCH ROUTE
     Route::get('global-search', [GlobalSearchController::class, 'search']);
+
+    // --- Work Taken Feature ---
+    Route::apiResource('work-taken', WorkTakenController::class);
 });
