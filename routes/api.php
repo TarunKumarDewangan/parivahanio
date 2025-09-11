@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\SldController;
 use App\Http\Controllers\Api\VehicleTaxController;
 use App\Http\Controllers\Api\VltdController;
 use App\Http\Controllers\Api\ReportController;
+use App\Http\Controllers\Api\GlobalSearchController;
 
 // --- PUBLIC ROUTES ---
 Route::post('/register', [AuthController::class, 'register']);
@@ -56,4 +57,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // --- Report Features ---
     Route::get('reports/expiring-documents', [ReportController::class, 'expiringDocuments']);
+
+    Route::get('reports/expiring-documents', [ReportController::class, 'expiringDocuments']);
+
+    // ✅ NEW GLOBAL SEARCH ROUTE
+    Route::get('global-search', [GlobalSearchController::class, 'search']);
 });

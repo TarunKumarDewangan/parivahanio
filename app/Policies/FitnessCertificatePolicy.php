@@ -9,58 +9,43 @@ use Illuminate\Auth\Access\Response;
 class FitnessCertificatePolicy
 {
     /**
-     * Determine whether the user can view any models.
+     * Centralized logic to determine if a user can manage a document.
      */
-    public function viewAny(User $user): bool
+    private function canManage(User $user, FitnessCertificate $fitnessCertificate): bool
     {
-        //
+        // Admins can do anything.
+        if ($user->role === 'admin') {
+            return true;
+        }
+
+        // The user must own the parent citizen record.
+        $citizenOwner = $fitnessCertificate->vehicle->citizen->user;
+        if ($user->id === $citizenOwner->id) {
+            return true;
+        }
+
+        // The user is a group manager and the citizen was created by someone in their group.
+        if ($user->role === 'group_manager') {
+            if ($user->group_id && $citizenOwner && $citizenOwner->group_id) {
+                return $user->group_id === $citizenOwner->group_id;
+            }
+        }
+
+        return false;
     }
 
-    /**
-     * Determine whether the user can view the model.
-     */
     public function view(User $user, FitnessCertificate $fitnessCertificate): bool
     {
-        //
+        return $this->canManage($user, $fitnessCertificate);
     }
 
-    /**
-     * Determine whether the user can create models.
-     */
-    public function create(User $user): bool
-    {
-        //
-    }
-
-    /**
-     * Determine whether the user can update the model.
-     */
     public function update(User $user, FitnessCertificate $fitnessCertificate): bool
     {
-        //
+        return $this->canManage($user, $fitnessCertificate);
     }
 
-    /**
-     * Determine whether the user can delete the model.
-     */
     public function delete(User $user, FitnessCertificate $fitnessCertificate): bool
     {
-        //
-    }
-
-    /**
-     * Determine whether the user can restore the model.
-     */
-    public function restore(User $user, FitnessCertificate $fitnessCertificate): bool
-    {
-        //
-    }
-
-    /**
-     * Determine whether the user can permanently delete the model.
-     */
-    public function forceDelete(User $user, FitnessCertificate $fitnessCertificate): bool
-    {
-        //
+        return $this->canManage($user, $fitnessCertificate);
     }
 }

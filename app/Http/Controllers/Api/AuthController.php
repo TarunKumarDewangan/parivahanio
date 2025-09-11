@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -19,7 +20,6 @@ class AuthController extends Controller
             'name' => 'required|string|max:255',
             'phone' => 'required|string|max:15|unique:users,phone',
             'password' => 'required|string|min:6',
-            // Use consistent role names as defined in the database schema
             'role' => ['sometimes', Rule::in(['admin', 'group_manager', 'user'])],
         ]);
 
@@ -27,7 +27,8 @@ class AuthController extends Controller
             'name' => $request->name,
             'phone' => $request->phone,
             'password' => Hash::make($request->password),
-            'role' => $request->role ?? 'user', // Default to 'user'
+            'role' => $request->role ?? 'user',
+            'group_id' => $request->group_id ?? null,
         ]);
 
         $token = $user->createToken('auth_token')->plainTextToken;
@@ -80,14 +81,22 @@ class AuthController extends Controller
             'message' => 'Logged out successfully',
         ]);
     }
+
+    /**
+     * Get the authenticated User.
+     */
     public function me(Request $request)
     {
+        // ✅ FIX: Use load('group') to include the group relationship in the response.
         return response()->json([
             'status' => true,
-            'user' => $request->user(),
+            'user' => $request->user()->load('group'),
         ]);
     }
 
+    /**
+     * Update the authenticated user's password.
+     */
     public function updatePassword(Request $request)
     {
         $request->validate([

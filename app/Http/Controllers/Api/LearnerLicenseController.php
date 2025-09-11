@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\LearnerLicense;
 use Illuminate\Validation\Rule;
+use App\Models\User;
 
 class LearnerLicenseController extends Controller
 {
@@ -16,17 +17,19 @@ class LearnerLicenseController extends Controller
     public function index(Request $request)
     {
         $this->authorize('viewAny', LearnerLicense::class);
+        $user = $request->user();
 
-        if ($request->user()->role === 'admin') {
+        // ✅ IMPLEMENT ROLE-BASED DATA FETCHING
+        if ($user->role === 'admin') {
             $licenses = LearnerLicense::latest()->get();
+        } elseif ($user->role === 'group_manager') {
+            $userIdsInGroup = User::where('group_id', $user->group_id)->pluck('id');
+            $licenses = LearnerLicense::whereIn('user_id', $userIdsInGroup)->latest()->get();
         } else {
-            $licenses = LearnerLicense::where('user_id', $request->user()->id)->latest()->get();
+            $licenses = LearnerLicense::where('user_id', $user->id)->latest()->get();
         }
 
-        return response()->json([
-            'status' => true,
-            'licenses' => $licenses
-        ]);
+        return response()->json(['status' => true, 'licenses' => $licenses]);
     }
 
     /**

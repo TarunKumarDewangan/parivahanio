@@ -1,16 +1,17 @@
 import React from 'react';
-import Navbar from './Navbar'; // ✅ Import the new Navbar
-
-// NOTE: We no longer import Sidebar here.
+import Navbar from './Navbar';
 
 const Layout = ({ children }) => {
     return (
-        // ✅ SWITCH: The structure is now a simple div, not a flex container.
-        <div className="app-container">
+        <div className="app-container bg-light" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
             <Navbar />
-            <main className="container-fluid p-4 bg-light" style={{ minHeight: 'calc(100vh - 56px)' }}>
-                {children}
-            </main>
+
+            {/* ✅ NEW: This wrapper will center the content and add margins */}
+            <div className="page-content-wrapper flex-grow-1">
+                <main className="container-fluid p-4">
+                    {children}
+                </main>
+            </div>
         </div>
     );
 };

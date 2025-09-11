@@ -8,11 +8,23 @@ const initialFormState = {
   relation_type: 'S/O', relation_name: '', address: '', state: '', city: ''
 };
 
-const initialSearchState = { name: '', mobile_no: '' };
+const initialSearchState = { name: '', mobile_no: '', vehicle_no: '' };
+
+// ✅ HELPER FUNCTION: Splits an array into smaller arrays (chunks) of a specified size.
+const chunkArray = (array, size) => {
+  if (!array || !Array.isArray(array)) return [];
+  const chunkedArr = [];
+  let index = 0;
+  while (index < array.length) {
+    chunkedArr.push(array.slice(index, size + index));
+    index += size;
+  }
+  return chunkedArr;
+};
 
 const CitizenPage = () => {
-  const [citizens, setCitizens] = useState([]); // Master list from API
-  const [filteredCitizens, setFilteredCitizens] = useState([]); // List to display
+  const [citizens, setCitizens] = useState([]);
+  const [filteredCitizens, setFilteredCitizens] = useState([]);
   const [formData, setFormData] = useState(initialFormState);
   const [editCitizen, setEditCitizen] = useState(null);
   const [message, setMessage] = useState("");
@@ -25,7 +37,7 @@ const CitizenPage = () => {
     try {
       const { data } = await apiClient.get("/citizens");
       setCitizens(data || []);
-      setFilteredCitizens(data || []); // Initially, show all citizens
+      setFilteredCitizens(data || []);
     } catch (err) {
       setMessage(err.response?.data?.message || "Failed to load citizens.");
     } finally {
@@ -37,19 +49,22 @@ const CitizenPage = () => {
     fetchCitizens();
   }, []);
 
-  // ✅ Filtering logic that runs whenever search terms or the master list changes
   useEffect(() => {
-    let result = citizens.filter(citizen =>
-        (citizen.name || '').toUpperCase().includes(searchTerms.name.toUpperCase()) &&
-        (citizen.mobile_no || '').includes(searchTerms.mobile_no)
-    );
+    let result = citizens.filter(citizen => {
+        const nameMatch = (citizen.name || '').toUpperCase().includes(searchTerms.name.toUpperCase());
+        const mobileMatch = (citizen.mobile_no || '').includes(searchTerms.mobile_no);
+        const vehicleMatch = searchTerms.vehicle_no.trim() === '' ? true :
+            (citizen.vehicles || []).some(vehicle =>
+                (vehicle.registration_no || '').toUpperCase().includes(searchTerms.vehicle_no.toUpperCase())
+            );
+        return nameMatch && mobileMatch && vehicleMatch;
+    });
     setFilteredCitizens(result);
   }, [searchTerms, citizens]);
 
-
   const handleSearchChange = (e) => {
       const { name, value } = e.target;
-      setSearchTerms(prev => ({...prev, [name]: value}));
+      setSearchTerms(prev => ({...prev, [name]: value.toUpperCase()}));
   }
 
   const resetSearch = () => {
@@ -66,14 +81,13 @@ const CitizenPage = () => {
     e.preventDefault();
     const url = editCitizen ? `/citizens/${editCitizen.id}` : "/citizens";
     const method = editCitizen ? "put" : "post";
-
     try {
       await apiClient[method](url, formData);
       setMessage(editCitizen ? "Citizen updated successfully" : "Citizen created successfully");
       setFormData(initialFormState);
       setEditCitizen(null);
       setShowForm(false);
-      fetchCitizens(); // Refetch to get the latest master list
+      fetchCitizens();
     } catch (err) {
       const errorMsg = err.response?.data?.message || `Error saving citizen.`;
       const validationErrors = err.response?.data?.errors ? Object.values(err.response.data.errors).flat().join(' ') : '';
@@ -114,7 +128,7 @@ const CitizenPage = () => {
       {message && <div className="alert alert-info" role="alert">{message}</div>}
 
       {showForm && (
-        <div className="card p-3 mb-4">
+         <div className="card p-3 mb-4">
           <h4>{editCitizen ? "Edit Citizen Profile" : "Create New Citizen Profile"}</h4>
           <form onSubmit={handleSubmit}>
             <div className="row g-3">
@@ -141,40 +155,54 @@ const CitizenPage = () => {
           {!showForm && <button className="btn btn-primary" onClick={() => setShowForm(true)}>Add New Citizen</button>}
         </div>
 
-        {/* ✅ Search Bar */}
         <div className="card bg-light p-3 mb-3">
-            <div className="row g-2">
-                <div className="col-md">
-                    <input type="text" className="form-control form-control-sm" placeholder="Search by Name..." name="name" value={searchTerms.name} onChange={handleSearchChange} />
-                </div>
-                <div className="col-md">
-                    <input type="text" className="form-control form-control-sm" placeholder="Search by Mobile No..." name="mobile_no" value={searchTerms.mobile_no} onChange={handleSearchChange} />
-                </div>
-                <div className="col-md-auto">
-                    <button className="btn btn-secondary btn-sm w-100" onClick={resetSearch}>Reset</button>
-                </div>
-            </div>
+          <div className="row g-2">
+            <div className="col-md"><input type="text" className="form-control form-control-sm" placeholder="Search by Name..." name="name" value={searchTerms.name} onChange={handleSearchChange} /></div>
+            <div className="col-md"><input type="text" className="form-control form-control-sm" placeholder="Search by Mobile No..." name="mobile_no" value={searchTerms.mobile_no} onChange={handleSearchChange} /></div>
+            <div className="col-md"><input type="text" className="form-control form-control-sm" placeholder="Search by Vehicle No..." name="vehicle_no" value={searchTerms.vehicle_no} onChange={handleSearchChange} /></div>
+            <div className="col-md-auto"><button className="btn btn-secondary btn-sm w-100" onClick={resetSearch}>Reset</button></div>
+          </div>
         </div>
 
         <div className="table-responsive">
           <table className="table table-hover table-striped">
             <thead>
               <tr>
-                <th>Name</th><th>Relation's Name</th><th>Mobile No</th><th>Address</th><th>City/District</th><th style={{minWidth: "260px"}}>Actions</th>
+                <th>Name</th><th>Mobile No</th><th>City/District</th>
+                <th style={{ minWidth: "300px" }}>Registered Vehicles</th>
+                <th style={{minWidth: "260px"}}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan="6" className="text-center">Loading...</td></tr>
+                <tr><td colSpan="5" className="text-center">Loading...</td></tr>
               ) : filteredCitizens.length > 0 ? (
-                // ✅ Table now renders from the 'filteredCitizens' state
                 filteredCitizens.map((citizen) => (
                   <tr key={citizen.id}>
                     <td>{citizen.name || '-'}</td>
-                    <td>{citizen.relation_name ? `${citizen.relation_type} ${citizen.relation_name}` : '-'}</td>
                     <td>{citizen.mobile_no || '-'}</td>
-                    <td>{citizen.address || '-'}</td>
                     <td>{citizen.city || '-'}</td>
+
+                    {/* ✅ UPDATED: Implemented nested mapping for the 3-per-line layout */}
+                    <td>
+                      {(citizen.vehicles && citizen.vehicles.length > 0) ? (
+                        chunkArray(citizen.vehicles, 3).map((vehicleChunk, chunkIndex) => (
+                          <div key={chunkIndex} className="d-flex gap-1 mb-1">
+                            {vehicleChunk.map(vehicle => (
+                              <Link
+                                key={vehicle.id}
+                                to={`/vehicles/${vehicle.id}/documents`}
+                                className="badge bg-secondary text-decoration-none"
+                              >
+                                {vehicle.registration_no}
+                              </Link>
+                            ))}
+                          </div>
+                        ))
+                      ) : (
+                        '-'
+                      )}
+                    </td>
                     <td>
                       <Link to={`/citizens/${citizen.id}/vehicles`} className="btn btn-sm btn-info me-2">Manage Vehicles</Link>
                       <button className="btn btn-sm btn-warning me-2" onClick={() => startEdit(citizen)}>Edit</button>
@@ -183,7 +211,7 @@ const CitizenPage = () => {
                   </tr>
                 ))
               ) : (
-                <tr><td colSpan="6" className="text-center">No citizens found matching your search.</td></tr>
+                <tr><td colSpan="5" className="text-center">No citizens found matching your search.</td></tr>
               )}
             </tbody>
           </table>

@@ -9,7 +9,7 @@ use Illuminate\Auth\Access\Response;
 class LearnerLicensePolicy
 {
     /**
-     * Any logged-in user can view the list of licenses (it will be filtered in the controller).
+     * Determine whether the user can view any models.
      */
     public function viewAny(User $user): bool
     {
@@ -17,15 +17,41 @@ class LearnerLicensePolicy
     }
 
     /**
-     * A user can view a license if they are an admin OR they own the license.
+     * Centralized logic to determine if a user can manage a specific license.
      */
-    public function view(User $user, LearnerLicense $learnerLicense): bool
+    private function canManage(User $user, LearnerLicense $learnerLicense): bool
     {
-        return $user->role === 'admin' || $user->id === $learnerLicense->user_id;
+        // Admins can manage any license.
+        if ($user->role === 'admin') {
+            return true;
+        }
+
+        // A user can manage their own license.
+        if ($user->id === $learnerLicense->user_id) {
+            return true;
+        }
+
+        // A group manager can manage licenses created by users in their group.
+        if ($user->role === 'group_manager') {
+            $licenseCreator = $learnerLicense->user;
+            if ($user->group_id && $licenseCreator && $licenseCreator->group_id) {
+                return $user->group_id === $licenseCreator->group_id;
+            }
+        }
+
+        return false;
     }
 
     /**
-     * Any logged-in user can create a license for themselves.
+     * Determine whether the user can view the model.
+     */
+    public function view(User $user, LearnerLicense $learnerLicense): bool
+    {
+        return $this->canManage($user, $learnerLicense);
+    }
+
+    /**
+     * Determine whether the user can create models.
      */
     public function create(User $user): bool
     {
@@ -33,18 +59,18 @@ class LearnerLicensePolicy
     }
 
     /**
-     * A user can update a license if they are an admin OR they own the license.
+     * Determine whether the user can update the model.
      */
     public function update(User $user, LearnerLicense $learnerLicense): bool
     {
-        return $user->role === 'admin' || $user->id === $learnerLicense->user_id;
+        return $this->canManage($user, $learnerLicense);
     }
 
     /**
-     * A user can delete a license if they are an admin OR they own the license.
+     * Determine whether the user can delete the model.
      */
     public function delete(User $user, LearnerLicense $learnerLicense): bool
     {
-        return $user->role === 'admin' || $user->id === $learnerLicense->user_id;
+        return $this->canManage($user, $learnerLicense);
     }
 }

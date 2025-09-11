@@ -12,22 +12,17 @@ return new class extends Migration {
     {
         Schema::create('citizens', function (Blueprint $table) {
             $table->id();
-
-            // Foreign key to the users table. Tracks which system user created this citizen record.
-            // If the user is deleted, all their created citizen records are also deleted.
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
-
-            // Citizen's personal details
             $table->string('name');
-            $table->string('mobile_no')->unique();
-            $table->string('email')->nullable()->unique();
+            // ✅ UPDATED: Removed the ->unique() constraint
+            $table->string('mobile_no');
+            $table->string('email')->nullable()->unique(); // Email can still be unique
             $table->date('birth_date')->nullable();
-            $table->string('relation_type')->nullable(); // e.g., 'S/O', 'W/O', 'D/O'
+            $table->string('relation_type')->nullable();
             $table->string('relation_name')->nullable();
             $table->text('address')->nullable();
             $table->string('state')->nullable();
             $table->string('city')->nullable();
-
             $table->timestamps();
         });
     }

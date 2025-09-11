@@ -8,59 +8,38 @@ use Illuminate\Auth\Access\Response;
 
 class PermitPolicy
 {
-    /**
-     * Determine whether the user can view any models.
-     */
-    public function viewAny(User $user): bool
+    private function canManage(User $user, Permit $permit): bool
     {
-        //
+        if ($user->role === 'admin') {
+            return true;
+        }
+
+        $citizenOwner = $permit->vehicle->citizen->user;
+        if ($user->id === $citizenOwner->id) {
+            return true;
+        }
+
+        if ($user->role === 'group_manager') {
+            if ($user->group_id && $citizenOwner && $citizenOwner->group_id) {
+                return $user->group_id === $citizenOwner->group_id;
+            }
+        }
+
+        return false;
     }
 
-    /**
-     * Determine whether the user can view the model.
-     */
     public function view(User $user, Permit $permit): bool
     {
-        //
+        return $this->canManage($user, $permit);
     }
 
-    /**
-     * Determine whether the user can create models.
-     */
-    public function create(User $user): bool
-    {
-        //
-    }
-
-    /**
-     * Determine whether the user can update the model.
-     */
     public function update(User $user, Permit $permit): bool
     {
-        //
+        return $this->canManage($user, $permit);
     }
 
-    /**
-     * Determine whether the user can delete the model.
-     */
     public function delete(User $user, Permit $permit): bool
     {
-        //
-    }
-
-    /**
-     * Determine whether the user can restore the model.
-     */
-    public function restore(User $user, Permit $permit): bool
-    {
-        //
-    }
-
-    /**
-     * Determine whether the user can permanently delete the model.
-     */
-    public function forceDelete(User $user, Permit $permit): bool
-    {
-        //
+        return $this->canManage($user, $permit);
     }
 }

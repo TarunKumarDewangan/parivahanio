@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\DrivingLicense;
+use App\Models\User; // ✅ IMPORT USER MODEL
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -12,11 +13,21 @@ class DrivingLicenseController extends Controller
     public function index(Request $request)
     {
         $this->authorize('viewAny', DrivingLicense::class);
-        if ($request->user()->role === 'admin') {
+        $user = $request->user();
+
+        // ✅ IMPLEMENT ROLE-BASED DATA FETCHING
+        if ($user->role === 'admin') {
+            // Admin sees all records
             $licenses = DrivingLicense::latest()->get();
+        } elseif ($user->role === 'group_manager') {
+            // Manager sees records from all users in their group
+            $userIdsInGroup = User::where('group_id', $user->group_id)->pluck('id');
+            $licenses = DrivingLicense::whereIn('user_id', $userIdsInGroup)->latest()->get();
         } else {
-            $licenses = DrivingLicense::where('user_id', $request->user()->id)->latest()->get();
+            // Regular user sees only their own records
+            $licenses = DrivingLicense::where('user_id', $user->id)->latest()->get();
         }
+
         return response()->json(['status' => true, 'licenses' => $licenses]);
     }
 

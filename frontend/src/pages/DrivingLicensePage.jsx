@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import apiClient from "../api/axiosConfig";
 import Layout from "../components/Layout";
 
-// --- Initial State and Constants for Driving License ---
+// --- Initial State and Constants ---
 const initialFormState = {
   dl_number: "", name: "", father_name: "", dob: "", mobile_no: "",
   address: "", category: [], other_category: "", validity_from: "",
@@ -106,17 +106,28 @@ const DrivingLicensePage = () => {
       setMessage(`${errorMsg} ${validationErrors}`);
     }
   };
+
   const startEdit = (license) => {
     setEditLicense(license);
+
+    // ✅ FIX: Create a "clean" object for the form, converting nulls to empty strings.
+    const formSafeLicense = {};
+    for (const key in initialFormState) {
+        formSafeLicense[key] = license[key] === null ? "" : license[key];
+    }
+
+    // Set the form state with the clean object, and format dates separately.
     setFormData({
-        ...license,
+        ...formSafeLicense,
         dob: formatDateForInput(license.dob),
         validity_from: formatDateForInput(license.validity_from),
         validity_upto: formatDateForInput(license.validity_upto),
     });
+
     setShowForm(true);
     window.scrollTo(0, 0);
   };
+
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this Driving License?")) return;
     try {

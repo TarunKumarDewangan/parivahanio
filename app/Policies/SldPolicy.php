@@ -8,59 +8,38 @@ use Illuminate\Auth\Access\Response;
 
 class SldPolicy
 {
-    /**
-     * Determine whether the user can view any models.
-     */
-    public function viewAny(User $user): bool
+    private function canManage(User $user, Sld $sld): bool
     {
-        //
+        if ($user->role === 'admin') {
+            return true;
+        }
+
+        $citizenOwner = $sld->vehicle->citizen->user;
+        if ($user->id === $citizenOwner->id) {
+            return true;
+        }
+
+        if ($user->role === 'group_manager') {
+            if ($user->group_id && $citizenOwner && $citizenOwner->group_id) {
+                return $user->group_id === $citizenOwner->group_id;
+            }
+        }
+
+        return false;
     }
 
-    /**
-     * Determine whether the user can view the model.
-     */
     public function view(User $user, Sld $sld): bool
     {
-        //
+        return $this->canManage($user, $sld);
     }
 
-    /**
-     * Determine whether the user can create models.
-     */
-    public function create(User $user): bool
-    {
-        //
-    }
-
-    /**
-     * Determine whether the user can update the model.
-     */
     public function update(User $user, Sld $sld): bool
     {
-        //
+        return $this->canManage($user, $sld);
     }
 
-    /**
-     * Determine whether the user can delete the model.
-     */
     public function delete(User $user, Sld $sld): bool
     {
-        //
-    }
-
-    /**
-     * Determine whether the user can restore the model.
-     */
-    public function restore(User $user, Sld $sld): bool
-    {
-        //
-    }
-
-    /**
-     * Determine whether the user can permanently delete the model.
-     */
-    public function forceDelete(User $user, Sld $sld): bool
-    {
-        //
+        return $this->canManage($user, $sld);
     }
 }
