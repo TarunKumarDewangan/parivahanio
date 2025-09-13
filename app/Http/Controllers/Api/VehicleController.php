@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Vehicle;
 use App\Models\Citizen;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class VehicleController extends Controller
 {
@@ -23,27 +24,39 @@ class VehicleController extends Controller
      */
     public function store(Request $request, Citizen $citizen)
     {
-        $this->authorize('update', $citizen);
+        $this->authorize('update', $citizen); // Can the user add a vehicle to this citizen?
+
         $validatedData = $request->validate([
-            'registration_no' => 'required|string|max:20|unique:vehicles',
+            // Validation rule to check for uniqueness ONLY within the citizen's group.
+            'registration_no' => [
+                'required',
+                'string',
+                'max:20',
+                Rule::unique('vehicles')->where(function ($query) use ($citizen) {
+                    return $query->where('group_id', $citizen->group_id);
+                })
+            ],
             'type' => 'nullable|string|max:100',
             'make_model' => 'nullable|string|max:100',
             'chassis_no' => 'nullable|string|max:100',
             'engine_no' => 'nullable|string|max:100',
         ]);
 
+        // Automatically assign the citizen's group_id to the new vehicle.
+        $validatedData['group_id'] = $citizen->group_id;
+
         $vehicle = $citizen->vehicles()->create($validatedData);
         return response()->json($vehicle, 201);
     }
 
     /**
-     * ✅ NEW, EFFICIENT METHOD
-     * Get a vehicle's details and the counts of all its related documents in a single query.
+     * Get a vehicle's details AND the counts of all its related documents.
      */
     public function getDetails(Vehicle $vehicle)
     {
+        $vehicle->load('citizen.user');
         $this->authorize('view', $vehicle);
-        // loadCount is highly efficient. It performs one query to get counts for all relations.
+
         $vehicle->loadCount([
             'insurances',
             'vehicleTaxes',
@@ -53,26 +66,36 @@ class VehicleController extends Controller
             'slds',
             'vltds'
         ]);
+
         return response()->json($vehicle);
     }
 
     /**
-     * Display the specified vehicle.
+     * Display the specified resource.
      */
     public function show(Vehicle $vehicle)
     {
+        $vehicle->load('citizen.user');
         $this->authorize('view', $vehicle);
-        return response()->json($vehicle->load('citizen'));
+        return response()->json($vehicle);
     }
 
     /**
-     * Update the specified vehicle.
+     * Update the specified resource in storage.
      */
     public function update(Request $request, Vehicle $vehicle)
     {
         $this->authorize('update', $vehicle);
+
         $validatedData = $request->validate([
-            'registration_no' => 'required|string|max:20|unique:vehicles,registration_no,' . $vehicle->id,
+            'registration_no' => [
+                'required',
+                'string',
+                'max:20',
+                Rule::unique('vehicles')->where(function ($query) use ($vehicle) {
+                    return $query->where('group_id', $vehicle->group_id);
+                })->ignore($vehicle->id)
+            ],
             'type' => 'nullable|string|max:100',
             'make_model' => 'nullable|string|max:100',
             'chassis_no' => 'nullable|string|max:100',
@@ -84,7 +107,7 @@ class VehicleController extends Controller
     }
 
     /**
-     * Remove the specified vehicle from storage.
+     * Remove the specified resource from storage.
      */
     public function destroy(Vehicle $vehicle)
     {

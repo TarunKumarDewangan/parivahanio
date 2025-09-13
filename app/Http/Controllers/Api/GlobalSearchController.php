@@ -20,17 +20,17 @@ class GlobalSearchController extends Controller
             return response()->json([]);
         }
 
+        // ✅ FIX: Corrected and simplified the user scoping logic.
+        // Both group_manager and user roles should be able to search within their group.
         $userIds = [];
-        if ($user->role === 'group_manager') {
-            $userIds = User::where('group_id', $user->group_id)->pluck('id');
-        } elseif ($user->role === 'user') {
-            $userIds = [$user->id];
+        if ($user->role === 'group_manager' || $user->role === 'user') {
+            // Find all user IDs belonging to the logged-in user's group.
+            $userIds = User::where('group_id', $user->group_id)->pluck('id')->toArray();
         }
 
         // --- Base Queries with formatted labels ---
 
         $citizens = DB::table('citizens')
-            // ✅ UPDATED: The label is now constructed in the SQL query
             ->select('id as value', DB::raw("CONCAT(name, ' (Mobile: ', mobile_no, ')') as label"), DB::raw("'citizen' as type"), 'user_id')
             ->where(function ($q) use ($query) {
                 $q->where('name', 'LIKE', "%{$query}%")
@@ -39,7 +39,6 @@ class GlobalSearchController extends Controller
 
         $vehicles = DB::table('vehicles')
             ->join('citizens', 'vehicles.citizen_id', '=', 'citizens.id')
-            // ✅ UPDATED: The label is now constructed in the SQL query
             ->select('vehicles.id as value', DB::raw("CONCAT(vehicles.registration_no, ' (Owner: ', citizens.name, ')') as label"), DB::raw("'vehicle' as type"), 'citizens.user_id')
             ->where('vehicles.registration_no', 'LIKE', "%{$query}%");
 
@@ -71,6 +70,7 @@ class GlobalSearchController extends Controller
         // --- Apply Security and Get Final Results ---
         $finalQuery = DB::query()->fromSub($firstQuery, 'search_results');
 
+        // If the user is not an admin, scope the search to the collected user IDs.
         if ($user->role !== 'admin') {
             $finalQuery->whereIn('user_id', $userIds);
         }

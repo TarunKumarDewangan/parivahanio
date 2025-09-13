@@ -10,10 +10,10 @@ import UserPanel from "./pages/UserPanel";
 import LearnerLicensePage from "./pages/LearnerLicensePage";
 import DrivingLicensePage from "./pages/DrivingLicensePage";
 import CitizenPage from "./pages/CitizenPage";
-import VehiclePage from "./pages/VehiclePage";
+import VehiclePage from "./pages/VehiclePage"; // This should be imported
 import VehicleDocumentsPage from "./pages/VehicleDocumentsPage";
 import ReportPage from "./pages/ReportPage";
-import WorkTakenPage from "./pages/WorkTakenPage"; // ✅ IMPORTED
+import WorkTakenPage from "./pages/WorkTakenPage";
 import ApiTestPage from "./pages/ApiTestPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import "./App.css";
@@ -36,12 +36,12 @@ function App() {
         <Route path="/licenses" element={<ProtectedRoute allowedRoles={["admin", "group_manager", "user"]}><LearnerLicensePage /></ProtectedRoute>} />
         <Route path="/driving-licenses" element={<ProtectedRoute allowedRoles={["admin", "group_manager", "user"]}><DrivingLicensePage /></ProtectedRoute>} />
         <Route path="/citizens" element={<ProtectedRoute allowedRoles={["admin", "group_manager", "user"]}><CitizenPage /></ProtectedRoute>} />
+
+        {/* This route is now correctly used */}
         <Route path="/citizens/:citizenId/vehicles" element={<ProtectedRoute allowedRoles={["admin", "group_manager", "user"]}><VehiclePage /></ProtectedRoute>} />
+
         <Route path="/vehicles/:vehicleId/documents" element={<ProtectedRoute allowedRoles={["admin", "group_manager", "user"]}><VehicleDocumentsPage /></ProtectedRoute>} />
-
-        {/* ✅ NEW WORK TAKEN ROUTE */}
         <Route path="/work-taken" element={<ProtectedRoute allowedRoles={["admin", "group_manager", "user"]}><WorkTakenPage /></ProtectedRoute>} />
-
         <Route path="/reports" element={<ProtectedRoute allowedRoles={["admin", "group_manager", "user"]}><ReportPage /></ProtectedRoute>} />
       </Routes>
     </BrowserRouter>

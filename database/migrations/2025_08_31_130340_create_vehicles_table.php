@@ -13,18 +13,23 @@ return new class extends Migration {
         Schema::create('vehicles', function (Blueprint $table) {
             $table->id();
 
-            // Foreign key to the citizens table. This is the crucial link.
-            // If a citizen is deleted, all their associated vehicles will also be deleted.
+            // ✅ RESTORED: A vehicle now belongs to a specific citizen.
             $table->foreignId('citizen_id')->constrained()->onDelete('cascade');
 
-            // Core vehicle details as you specified.
-            $table->string('registration_no')->unique();
+            // ✅ NEW: Associate the vehicle with the group of the citizen.
+            $table->foreignId('group_id')->constrained()->onDelete('cascade');
+
+            // Registration number is no longer unique on its own.
+            $table->string('registration_no');
+
             $table->string('type')->nullable();
             $table->string('make_model')->nullable();
             $table->string('chassis_no')->nullable();
             $table->string('engine_no')->nullable();
-
             $table->timestamps();
+
+            // ✅ NEW: A registration number must be unique WITHIN a group, but can be repeated in different groups.
+            $table->unique(['group_id', 'registration_no']);
         });
     }
 

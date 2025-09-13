@@ -9,46 +9,47 @@ use Illuminate\Auth\Access\Response;
 class CitizenPolicy
 {
     /**
-     * Determine whether the user can view the model.
+     * Centralized logic to check if a user can manage a citizen record.
      */
-    public function view(User $user, Citizen $citizen): bool
+    private function canManage(User $user, Citizen $citizen): bool
     {
-        // Admins can view any citizen.
+        // Admins can do anything.
         if ($user->role === 'admin') {
             return true;
         }
 
-        // A user can view their own created citizen records.
-        if ($user->id === $citizen->user_id) {
+        // Users (including group managers) can manage citizens belonging to their own group.
+        // This requires the user to have a group_id.
+        if ($user->group_id && $user->group_id === $citizen->group_id) {
             return true;
-        }
-
-        // A group manager can view citizen records created by users in their group.
-        if ($user->role === 'group_manager') {
-            // Ensure both the manager and the citizen's creator have a group.
-            if ($user->group_id && $citizen->user && $citizen->user->group_id) {
-                return $user->group_id === $citizen->user->group_id;
-            }
         }
 
         return false;
     }
 
-    /**
-     * A user can update a citizen record if they have permission to view it.
-     * The logic is identical to the view method.
-     */
-    public function update(User $user, Citizen $citizen): bool
+    public function viewAny(User $user): bool
     {
-        return $this->view($user, $citizen);
+        return true;
     }
 
-    /**
-     * A user can delete a citizen record if they have permission to view it.
-     * The logic is identical to the view method.
-     */
+    public function view(User $user, Citizen $citizen): bool
+    {
+        return $this->canManage($user, $citizen);
+    }
+
+    public function create(User $user): bool
+    {
+        // Any authenticated user with a group can create a citizen.
+        return !is_null($user->group_id);
+    }
+
+    public function update(User $user, Citizen $citizen): bool
+    {
+        return $this->canManage($user, $citizen);
+    }
+
     public function delete(User $user, Citizen $citizen): bool
     {
-        return $this->view($user, $citizen);
+        return $this->canManage($user, $citizen);
     }
 }

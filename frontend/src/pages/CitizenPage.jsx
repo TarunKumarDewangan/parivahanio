@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import apiClient from "../api/axiosConfig";
 import Layout from "../components/Layout";
+import debounce from 'lodash.debounce';
 
 const initialFormState = {
   name: '', mobile_no: '', email: '', birth_date: '',
@@ -10,21 +11,17 @@ const initialFormState = {
 
 const initialSearchState = { name: '', mobile_no: '', vehicle_no: '' };
 
-// ✅ HELPER FUNCTION: Splits an array into smaller arrays (chunks) of a specified size.
 const chunkArray = (array, size) => {
   if (!array || !Array.isArray(array)) return [];
   const chunkedArr = [];
-  let index = 0;
-  while (index < array.length) {
-    chunkedArr.push(array.slice(index, size + index));
-    index += size;
+  for (let i = 0; i < array.length; i += size) {
+    chunkedArr.push(array.slice(i, i + size));
   }
   return chunkedArr;
 };
 
 const CitizenPage = () => {
   const [citizens, setCitizens] = useState([]);
-  const [filteredCitizens, setFilteredCitizens] = useState([]);
   const [formData, setFormData] = useState(initialFormState);
   const [editCitizen, setEditCitizen] = useState(null);
   const [message, setMessage] = useState("");
@@ -32,35 +29,23 @@ const CitizenPage = () => {
   const [showForm, setShowForm] = useState(false);
   const [searchTerms, setSearchTerms] = useState(initialSearchState);
 
-  const fetchCitizens = async () => {
+  const fetchCitizens = async (params = {}) => {
     setLoading(true);
     try {
-      const { data } = await apiClient.get("/citizens");
+      const activeParams = Object.fromEntries(Object.entries(params).filter(([_, value]) => value !== ''));
+      const { data } = await apiClient.get("/citizens", { params: activeParams });
       setCitizens(data || []);
-      setFilteredCitizens(data || []);
     } catch (err) {
       setMessage(err.response?.data?.message || "Failed to load citizens.");
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
-  useEffect(() => {
-    fetchCitizens();
-  }, []);
+  const debouncedFetch = useCallback(debounce((params) => fetchCitizens(params), 300), []);
 
   useEffect(() => {
-    let result = citizens.filter(citizen => {
-        const nameMatch = (citizen.name || '').toUpperCase().includes(searchTerms.name.toUpperCase());
-        const mobileMatch = (citizen.mobile_no || '').includes(searchTerms.mobile_no);
-        const vehicleMatch = searchTerms.vehicle_no.trim() === '' ? true :
-            (citizen.vehicles || []).some(vehicle =>
-                (vehicle.registration_no || '').toUpperCase().includes(searchTerms.vehicle_no.toUpperCase())
-            );
-        return nameMatch && mobileMatch && vehicleMatch;
-    });
-    setFilteredCitizens(result);
-  }, [searchTerms, citizens]);
+    debouncedFetch(searchTerms);
+    return () => { debouncedFetch.cancel(); };
+  }, [searchTerms, debouncedFetch]);
 
   const handleSearchChange = (e) => {
       const { name, value } = e.target;
@@ -87,7 +72,7 @@ const CitizenPage = () => {
       setFormData(initialFormState);
       setEditCitizen(null);
       setShowForm(false);
-      fetchCitizens();
+      fetchCitizens(searchTerms);
     } catch (err) {
       const errorMsg = err.response?.data?.message || `Error saving citizen.`;
       const validationErrors = err.response?.data?.errors ? Object.values(err.response.data.errors).flat().join(' ') : '';
@@ -110,7 +95,7 @@ const CitizenPage = () => {
     try {
       await apiClient.delete(`/citizens/${id}`);
       setMessage("Citizen deleted successfully");
-      fetchCitizens();
+      fetchCitizens(searchTerms);
     } catch (err) {
       setMessage(err.response?.data?.message || "Error deleting citizen.");
     }
@@ -155,13 +140,13 @@ const CitizenPage = () => {
           {!showForm && <button className="btn btn-primary" onClick={() => setShowForm(true)}>Add New Citizen</button>}
         </div>
 
-        <div className="card bg-light p-3 mb-3">
-          <div className="row g-2">
-            <div className="col-md"><input type="text" className="form-control form-control-sm" placeholder="Search by Name..." name="name" value={searchTerms.name} onChange={handleSearchChange} /></div>
-            <div className="col-md"><input type="text" className="form-control form-control-sm" placeholder="Search by Mobile No..." name="mobile_no" value={searchTerms.mobile_no} onChange={handleSearchChange} /></div>
-            <div className="col-md"><input type="text" className="form-control form-control-sm" placeholder="Search by Vehicle No..." name="vehicle_no" value={searchTerms.vehicle_no} onChange={handleSearchChange} /></div>
-            <div className="col-md-auto"><button className="btn btn-secondary btn-sm w-100" onClick={resetSearch}>Reset</button></div>
-          </div>
+        <div className="card bg-light p-3 mb-3 page-search-filters">
+            <div className="row g-2">
+                <div className="col-md"><input type="text" className="form-control form-control-sm" placeholder="Search by Name..." name="name" value={searchTerms.name} onChange={handleSearchChange} /></div>
+                <div className="col-md"><input type="text" className="form-control form-control-sm" placeholder="Search by Mobile No..." name="mobile_no" value={searchTerms.mobile_no} onChange={handleSearchChange} /></div>
+                <div className="col-md"><input type="text" className="form-control form-control-sm" placeholder="Search by Vehicle No..." name="vehicle_no" value={searchTerms.vehicle_no} onChange={handleSearchChange} /></div>
+                <div className="col-md-auto"><button className="btn btn-secondary btn-sm w-100" onClick={resetSearch}>Reset</button></div>
+            </div>
         </div>
 
         <div className="table-responsive">
@@ -176,32 +161,26 @@ const CitizenPage = () => {
             <tbody>
               {loading ? (
                 <tr><td colSpan="5" className="text-center">Loading...</td></tr>
-              ) : filteredCitizens.length > 0 ? (
-                filteredCitizens.map((citizen) => (
+              ) : citizens.length > 0 ? (
+                citizens.map((citizen) => (
                   <tr key={citizen.id}>
                     <td>{citizen.name || '-'}</td>
                     <td>{citizen.mobile_no || '-'}</td>
                     <td>{citizen.city || '-'}</td>
-
-                    {/* ✅ UPDATED: Implemented nested mapping for the 3-per-line layout */}
                     <td>
-                      {(citizen.vehicles && citizen.vehicles.length > 0) ? (
-                        chunkArray(citizen.vehicles, 3).map((vehicleChunk, chunkIndex) => (
-                          <div key={chunkIndex} className="d-flex gap-1 mb-1">
-                            {vehicleChunk.map(vehicle => (
-                              <Link
-                                key={vehicle.id}
-                                to={`/vehicles/${vehicle.id}/documents`}
-                                className="badge bg-secondary text-decoration-none"
-                              >
-                                {vehicle.registration_no}
-                              </Link>
-                            ))}
-                          </div>
-                        ))
-                      ) : (
-                        '-'
-                      )}
+                      <div className="d-flex flex-wrap gap-1">
+                        {(citizen.vehicles && citizen.vehicles.length > 0) ? (
+                          chunkArray(citizen.vehicles, 3).map((vehicleChunk, chunkIndex) => (
+                            <div key={chunkIndex} className="d-flex gap-1 mb-1">
+                              {vehicleChunk.map(vehicle => (
+                                <Link key={vehicle.id} to={`/vehicles/${vehicle.id}/documents`} className="badge bg-secondary text-decoration-none">
+                                  {vehicle.registration_no}
+                                </Link>
+                              ))}
+                            </div>
+                          ))
+                        ) : ('-')}
+                      </div>
                     </td>
                     <td>
                       <Link to={`/citizens/${citizen.id}/vehicles`} className="btn btn-sm btn-info me-2">Manage Vehicles</Link>

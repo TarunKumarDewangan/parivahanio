@@ -17,12 +17,15 @@ const VehiclePage = () => {
   const fetchVehicleData = async () => {
     setLoading(true);
     try {
+      // Get the citizen's name for the header
       const citizenRes = await apiClient.get(`/citizens/${citizenId}`);
       setCitizen(citizenRes.data);
+
+      // Get the list of vehicles for this citizen
       const vehiclesRes = await apiClient.get(`/citizens/${citizenId}/vehicles`);
       setVehicles(vehiclesRes.data);
     } catch (err) {
-      setMessage("Failed to load data.");
+      setMessage("Failed to load data. You may not have permission to view this record.");
     } finally {
       setLoading(false);
     }
@@ -39,6 +42,7 @@ const VehiclePage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // For creating, we post to the nested citizen's vehicle endpoint
     const url = editVehicle ? `/vehicles/${editVehicle.id}` : `/citizens/${citizenId}/vehicles`;
     const method = editVehicle ? "put" : "post";
 
@@ -47,7 +51,7 @@ const VehiclePage = () => {
       setMessage(editVehicle ? "Vehicle updated successfully" : "Vehicle added successfully");
       setFormData(initialFormState);
       setEditVehicle(null);
-      fetchVehicleData();
+      fetchVehicleData(); // Refresh the list
     } catch (err) {
       const errorMsg = err.response?.data?.message || `Error saving vehicle.`;
       const validationErrors = err.response?.data?.errors ? Object.values(err.response.data.errors).flat().join(' ') : '';
@@ -76,7 +80,7 @@ const VehiclePage = () => {
     setFormData(initialFormState);
   };
 
-  if (loading) return <Layout><p>Loading...</p></Layout>;
+  if (loading && !citizen) return <Layout><p>Loading...</p></Layout>;
 
   return (
     <Layout>
@@ -104,17 +108,19 @@ const VehiclePage = () => {
       <div className="card p-3">
         <h4>Existing Vehicles</h4>
         <div className="table-responsive">
-          <table className="table table-hover">
+          <table className="table table-hover table-striped">
             <thead>
               <tr><th>Reg. No</th><th>Make/Model</th><th>Chassis No</th><th style={{width: '280px'}}>Actions</th></tr>
             </thead>
             <tbody>
-              {vehicles.length > 0 ? (
+              {loading ? (
+                  <tr><td colSpan="4" className="text-center">Loading...</td></tr>
+              ) : vehicles.length > 0 ? (
                 vehicles.map((vehicle) => (
                   <tr key={vehicle.id}>
                     <td>{vehicle.registration_no}</td>
-                    <td>{vehicle.make_model}</td>
-                    <td>{vehicle.chassis_no}</td>
+                    <td>{vehicle.make_model || '-'}</td>
+                    <td>{vehicle.chassis_no || '-'}</td>
                     <td>
                       <Link to={`/vehicles/${vehicle.id}/documents`} className="btn btn-sm btn-success me-2">Manage Documents</Link>
                       <button className="btn btn-sm btn-warning me-2" onClick={() => startEdit(vehicle)}>Edit</button>
@@ -133,5 +139,4 @@ const VehiclePage = () => {
   );
 };
 
-// ✅ FIX: Added the missing export default statement
 export default VehiclePage;

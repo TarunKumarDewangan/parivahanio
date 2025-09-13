@@ -1,23 +1,17 @@
 import React, { useState } from "react";
-import axios from "axios";
+import apiClient from "../api/axiosConfig"; // ✅ Use the centralized API client
 import Layout from "../components/Layout";
 
-const API_BASE = "http://127.0.0.1:8000/api";
-
 const ApiTestPage = () => {
-  const token = localStorage.getItem("token");
-  const headers = { Authorization: `Bearer ${token}` };
-
   const [response, setResponse] = useState("");
 
   // Test: try creating a group
   const testCreateGroup = async () => {
     try {
-      const { data } = await axios.post(
-        API_BASE + "/groups",
-        { name: "Test Group" + Math.floor(Math.random() * 1000) },
-        { headers }
-      );
+      // ✅ Use the apiClient which automatically includes the auth token
+      const { data } = await apiClient.post("/groups", {
+        name: "Test Group" + Math.floor(Math.random() * 1000),
+      });
       setResponse(JSON.stringify(data, null, 2));
     } catch (err) {
       setResponse(err.response?.data?.message || "Error: " + err.message);
@@ -27,10 +21,10 @@ const ApiTestPage = () => {
   // Test: try resetting a user's password
   const testResetPassword = async () => {
     try {
-      const { data } = await axios.put(
-        API_BASE + "/users/2", // assume ID=2 exists
-        { password: "newpassword123" },
-        { headers }
+      // ✅ Use the apiClient for the PUT request
+      const { data } = await apiClient.put(
+        "/users/2", // assume ID=2 exists
+        { password: "newpassword123" }
       );
       setResponse(JSON.stringify(data, null, 2));
     } catch (err) {

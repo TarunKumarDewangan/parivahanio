@@ -10,7 +10,8 @@ class Vehicle extends Model
     use HasFactory;
 
     protected $fillable = [
-        'citizen_id',
+        'citizen_id',       // ✅ RESTORED
+        'group_id',         // ✅ ADDED
         'registration_no',
         'type',
         'make_model',
@@ -18,10 +19,31 @@ class Vehicle extends Model
         'engine_no',
     ];
 
+    /**
+     * ✅ RESTORED: A Vehicle belongs to one Citizen.
+     */
     public function citizen()
     {
         return $this->belongsTo(Citizen::class);
     }
+
+    /**
+     * The group this vehicle record belongs to.
+     */
+    public function group()
+    {
+        return $this->belongsTo(Group::class);
+    }
+
+    /**
+     * A Vehicle can be part of many WorkTaken records.
+     */
+    public function workTakens()
+    {
+        return $this->hasMany(WorkTaken::class);
+    }
+
+    // Document relationships remain correct.
     public function fitnessCertificates()
     {
         return $this->hasMany(FitnessCertificate::class);

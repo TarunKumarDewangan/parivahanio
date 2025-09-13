@@ -47,10 +47,20 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::apiResource('citizens', CitizenController::class);
 
     // --- Vehicle & Document Features ---
-    Route::get('citizens/{citizen}/vehicles', [VehicleController::class, 'index']);
-    Route::post('citizens/{citizen}/vehicles', [VehicleController::class, 'store']);
-    Route::apiResource('vehicles', VehicleController::class)->except(['index', 'store']);
+
+    // Nested resource for vehicles under a citizen. This creates routes like:
+    // GET    /citizens/{citizen}/vehicles      (index)
+    // POST   /citizens/{citizen}/vehicles      (store)
+    Route::apiResource('citizens.vehicles', VehicleController::class)->except(['show', 'update', 'destroy']);
+
+    // Standalone routes for managing a specific vehicle (Show, Update, Delete)
+    // This allows cleaner URLs like /vehicles/{vehicle} for these actions.
+    Route::apiResource('vehicles', VehicleController::class)->only(['show', 'update', 'destroy']);
+
+    // Efficient route for the document page
     Route::get('vehicles/{vehicle}/details', [VehicleController::class, 'getDetails']);
+
+    // Nested resources for all vehicle documents
     Route::apiResource('vehicles.fitness_certificates', FitnessCertificateController::class);
     Route::apiResource('vehicles.insurances', InsuranceController::class);
     Route::apiResource('vehicles.permits', PermitController::class);
@@ -59,10 +69,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::apiResource('vehicles.vehicle_taxes', VehicleTaxController::class);
     Route::apiResource('vehicles.vltds', VltdController::class);
 
-    // --- Report & Search Features ---
+    // --- Work Taken & Report Features ---
+    Route::apiResource('work-taken', WorkTakenController::class);
     Route::get('reports/expiring-documents', [ReportController::class, 'expiringDocuments']);
     Route::get('global-search', [GlobalSearchController::class, 'search']);
-
-    // --- Work Taken Feature ---
-    Route::apiResource('work-taken', WorkTakenController::class);
 });

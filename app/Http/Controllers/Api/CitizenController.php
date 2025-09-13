@@ -13,27 +13,49 @@ class CitizenController extends Controller
     {
         $user = $request->user();
 
-        // Eager load vehicles to prevent N+1 query issues and ensure data is available
-        if ($user->role === 'admin') {
-            $citizens = Citizen::with('vehicles')->latest()->get();
-        } elseif ($user->role === 'group_manager') {
+        // Start the query with the vehicle relationship eager loaded
+        $query = Citizen::with('vehicles');
+
+        // Apply security scope based on user role
+        if ($user->role === 'group_manager' || $user->role === 'user') {
             $userIdsInGroup = User::where('group_id', $user->group_id)->pluck('id');
-            $citizens = Citizen::with('vehicles')->whereIn('user_id', $userIdsInGroup)->latest()->get();
-        } else {
-            $citizens = Citizen::with('vehicles')->where('user_id', $user->id)->latest()->get();
+            $query->whereIn('user_id', $userIdsInGroup);
         }
+        // No user/group filter needed for 'admin'
+
+        // ✅ NEW: Apply search filters if they are present in the request
+        if ($request->has('name')) {
+            $query->where('name', 'LIKE', '%' . $request->input('name') . '%');
+        }
+        if ($request->has('mobile_no')) {
+            $query->where('mobile_no', 'LIKE', '%' . $request->input('mobile_no') . '%');
+        }
+        if ($request->has('vehicle_no')) {
+            $query->whereHas('vehicles', function ($q) use ($request) {
+                $q->where('registration_no', 'LIKE', '%' . $request->input('vehicle_no') . '%');
+            });
+        }
+
+        $citizens = $query->latest()->get();
+
+        // Manipulate the collection to create a clean 'vehicles' array on each citizen
+        // This part is no longer needed with the correct eager loading structure, but we keep it for consistency
+        $citizens->each(function ($citizen) {
+            if (!$citizen->relationLoaded('vehicles')) {
+                // If for some reason vehicles weren't loaded (e.g., in a different method), this prevents errors.
+                $citizen->vehicles = $citizen->workTakens->pluck('vehicle')->filter()->unique('id')->values();
+                unset($citizen->workTakens);
+            }
+        });
 
         return response()->json($citizens);
     }
 
     public function store(Request $request)
     {
-        // Policy check for creation is implicitly handled by requiring an authenticated user.
-        // Or you can add: $this->authorize('create', Citizen::class);
-
         $validatedData = $request->validate([
             'name' => 'required|string|max:255',
-            'mobile_no' => 'required|string|max:15',
+            'mobile_no' => 'required|string|max:15', // Unique rule removed at group level
             'email' => 'nullable|email|max:255|unique:citizens',
             'birth_date' => 'nullable|date',
             'relation_type' => 'nullable|string|max:50',
@@ -44,9 +66,9 @@ class CitizenController extends Controller
         ]);
 
         $validatedData['user_id'] = $request->user()->id;
+        $validatedData['group_id'] = $request->user()->group_id; // Assign group on creation
         $citizen = Citizen::create($validatedData);
 
-        // ✅ Return the created model with its relationships loaded for consistency.
         return response()->json($citizen->load('vehicles'), 201);
     }
 
@@ -59,7 +81,6 @@ class CitizenController extends Controller
     public function update(Request $request, Citizen $citizen)
     {
         $this->authorize('update', $citizen);
-
         $validatedData = $request->validate([
             'name' => 'required|string|max:255',
             'mobile_no' => 'required|string|max:15',
@@ -74,8 +95,6 @@ class CitizenController extends Controller
 
         $citizen->update($validatedData);
 
-        // ✅ FIX: Refresh the model from the database and load relationships
-        // This ensures the response contains the absolute latest data.
         return response()->json($citizen->fresh()->load('vehicles'));
     }
 

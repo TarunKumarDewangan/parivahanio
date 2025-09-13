@@ -1,13 +1,8 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import apiClient from "../api/axiosConfig"; // ✅ Use the centralized API client
 import Layout from "../components/Layout";
 
-const API_BASE = "http://127.0.0.1:8000/api";
-
 const AdminProfile = () => {
-  const token = localStorage.getItem("token");
-  const headers = { Authorization: `Bearer ${token}` };
-
   const [user, setUser] = useState(null);
   const [message, setMessage] = useState("");
   const [name, setName] = useState("");
@@ -17,7 +12,8 @@ const AdminProfile = () => {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const { data } = await axios.get(API_BASE + "/me", { headers });
+        // ✅ Use the apiClient which automatically includes the auth token
+        const { data } = await apiClient.get("/me");
         setUser(data.user);
         setName(data.user.name);
         setPhone(data.user.phone);
@@ -31,15 +27,15 @@ const AdminProfile = () => {
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
     try {
-      const { data } = await axios.put(
-        API_BASE + `/users/${user.id}`,
-        { name, phone, ...(password && { password }) },
-        { headers }
+      // ✅ Use the apiClient for the PUT request
+      const { data } = await apiClient.put(
+        `/users/${user.id}`,
+        { name, phone, ...(password && { password }) }
       );
       setMessage(data.message);
       setPassword("");
-    } catch {
-      setMessage("Error updating profile");
+    } catch (err) {
+      setMessage(err.response?.data?.message || "Error updating profile");
     }
   };
 

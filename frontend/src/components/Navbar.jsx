@@ -45,9 +45,11 @@ const Navbar = () => {
     const handleResultClick = (result) => {
         setSearchQuery('');
         setSearchResults([]);
+        // ✅ FIX: Use result.value which contains the ID
+        const resultId = result.value;
         switch(result.type) {
             case 'citizen': navigate('/citizens'); break;
-            case 'vehicle': navigate(`/vehicles/${result.id}/documents`); break;
+            case 'vehicle': navigate(`/vehicles/${resultId}/documents`); break;
             case 'learner_license': navigate('/licenses'); break;
             case 'driving_license': navigate('/driving-licenses'); break;
             default: navigate('/dashboard'); break;
@@ -71,10 +73,7 @@ const Navbar = () => {
                         <li className="nav-item"><NavLink className="nav-link" to="/licenses">Learner Licenses</NavLink></li>
                         <li className="nav-item"><NavLink className="nav-link" to="/driving-licenses">Driving Licenses</NavLink></li>
                         <li className="nav-item"><NavLink className="nav-link" to="/citizens">Citizens</NavLink></li>
-
-                        {/* ✅ NEW WORK TAKEN LINK */}
                         <li className="nav-item"><NavLink className="nav-link" to="/work-taken">Work Taken</NavLink></li>
-
                         <li className="nav-item"><NavLink className="nav-link" to="/reports">Reports</NavLink></li>
 
                         {user.role === 'admin' && (
@@ -97,14 +96,16 @@ const Navbar = () => {
                         {(isSearching || searchResults.length > 0 || searchQuery.length >= 2) && (
                             <ul className="dropdown-menu show" style={{ position: 'absolute', top: '100%', width: '100%', zIndex: 1050 }}>
                                 {isSearching && <li className="dropdown-item-text">Searching...</li>}
+
+                                {/* ✅ FIX: Map over the search results and use result.label and result.value */}
                                 {!isSearching && searchResults.map(result => (
-                                    <li key={`${result.type}-${result.id}`}>
+                                    <li key={`${result.type}-${result.value}`}>
                                         <button className="dropdown-item" onClick={() => handleResultClick(result)}>
-                                            <strong>{result.title}</strong>
-                                            <small className="d-block text-muted">{result.description}</small>
+                                            {result.label}
                                         </button>
                                     </li>
                                 ))}
+
                                 {!isSearching && searchResults.length === 0 && searchQuery.length >= 2 && <li className="dropdown-item-text">No results found.</li>}
                             </ul>
                         )}

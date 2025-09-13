@@ -1,11 +1,8 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import apiClient from "../api/axiosConfig"; // ✅ Use the centralized API client
 import Layout from "../components/Layout";
 
-const API_BASE = "http://127.0.0.1:8000/api";
-
 const UserPanel = () => {
-  const token = localStorage.getItem("token");
   const [user, setUser] = useState(null);
   const [message, setMessage] = useState("");
 
@@ -16,9 +13,8 @@ const UserPanel = () => {
   // Fetch logged-in user profile
   const fetchUser = async () => {
     try {
-      const { data } = await axios.get(API_BASE + "/me", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      // ✅ Use the apiClient which automatically includes the auth token
+      const { data } = await apiClient.get("/me");
       setUser(data.user);
     } catch {
       setMessage("Failed to load profile");
@@ -33,15 +29,12 @@ const UserPanel = () => {
   const handlePasswordUpdate = async (e) => {
     e.preventDefault();
     try {
-      const { data } = await axios.put(
-        API_BASE + "/me/password",
-        {
-          old_password: oldPassword,
-          password,
-          password_confirmation: passwordConfirmation,
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      // ✅ Use the apiClient for the PUT request
+      const { data } = await apiClient.put("/me/password", {
+        old_password: oldPassword,
+        password,
+        password_confirmation: passwordConfirmation,
+      });
       setMessage(data.message || "Password updated successfully");
       setOldPassword("");
       setPassword("");
