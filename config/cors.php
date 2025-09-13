@@ -19,20 +19,22 @@ return [
 
     'allowed_methods' => ['*'],
 
-    //'allowed_origins' => [env('FRONTEND_URL', 'http://localhost:5173')],
-    'allowed_origins_patterns' => [
-        '/^https:\/\/(www\.)?rtodatahub\.in$/',
-        '/^https:\/\/api\.rtodatahub\.in$/',
+    'allowed_origins' => [
+        'https://rtodatahub.in',
+        'https://www.rtodatahub.in',
+        'http://localhost:5173',
+        'http://127.0.0.1:8000',
     ],
 
-
-    'allowed_origins_patterns' => [],
+    'allowed_origins_patterns' => [
+        '/^https:\/\/(www\.)?rtodatahub\.in$/',
+    ],
 
     'allowed_headers' => ['*'],
 
     'exposed_headers' => [],
 
-    'max_age' => 0,
+    'max_age' => 86400,
 
     'supports_credentials' => true,
 
