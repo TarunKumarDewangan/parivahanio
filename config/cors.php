@@ -8,19 +8,13 @@ return [
     |--------------------------------------------------------------------------
     */
 
+    // In config/cors.php
+
     'paths' => ['api/*', 'sanctum/csrf-cookie'],
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => [
-        // For local development
-        'http://localhost:5173',
-        'http://127.0.0.1:5173',
-
-        // ✅ UPDATED: For your new live production site
-        'https://rtodatahub.in',
-        'https://www.rtodatahub.in',
-    ],
+    'allowed_origins' => explode(',', env('FRONTEND_URL', 'http://localhost:5173')), // Use the new variable
 
     'allowed_origins_patterns' => [],
 
