@@ -20,11 +20,11 @@ return [
     'allowed_methods' => ['*'],
 
     //'allowed_origins' => [env('FRONTEND_URL', 'http://localhost:5173')],
-    'allowed_origins' => [
-        'https://rtodatahub.in',
-        'https://api.rtodatahub.in',
-        'http://localhost:5173',
+    'allowed_origins_patterns' => [
+        '/^https:\/\/(www\.)?rtodatahub\.in$/',
+        '/^https:\/\/api\.rtodatahub\.in$/',
     ],
+
 
     'allowed_origins_patterns' => [],
 
