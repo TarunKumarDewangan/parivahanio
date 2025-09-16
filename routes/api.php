@@ -73,4 +73,18 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::apiResource('work-taken', WorkTakenController::class);
     Route::get('reports/expiring-documents', [ReportController::class, 'expiringDocuments']);
     Route::get('global-search', [GlobalSearchController::class, 'search']);
+
+
+});
+
+Route::get('/debug-config', function () {
+    return response()->json([
+        'message' => 'Current Live Configuration',
+        'session_driver' => config('session.driver'),
+        'session_domain' => config('session.domain'),
+        'session_secure' => config('session.secure'),
+        'session_same_site' => config('session.same_site'),
+        'sanctum_stateful_domains' => config('sanctum.stateful'),
+        'app_url' => config('app.url'),
+    ]);
 });
