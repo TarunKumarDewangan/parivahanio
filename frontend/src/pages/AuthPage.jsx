@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, Form, Button } from "react-bootstrap";
 import { useAuth } from "../context/AuthContext";
-import apiClient from "../api/axiosConfig"; // ✅ THE CRUCIAL IMPORT
+import apiClient from "../api/axiosConfig";
+import axios from "axios"; // ✅ 1. Import axios directly for the special call
 
 const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -12,7 +13,6 @@ const AuthPage = () => {
   const navigate = useNavigate();
   const { user, login, loading: authLoading } = useAuth();
 
-  // Redirect if already logged in
   useEffect(() => {
     if (authLoading) return;
     if (user) {
@@ -29,22 +29,30 @@ const AuthPage = () => {
     setLoading(true);
 
     try {
-      // ✅ Using the correct, globally configured apiClient
+      // ✅ 2. Use a direct axios call to the FULL, CORRECT URL for the handshake.
+      // This bypasses the apiClient's baseURL which adds the extra '/api'.
+      await axios.get(`${import.meta.env.VITE_API_BASE_URL.replace('/api', '')}/sanctum/csrf-cookie`, {
+          withCredentials: true,
+      });
+
+      // Now, proceed with the login/register request using the normal apiClient
       const { data } = await apiClient.post(endpoint, form);
       login(data.user, data.token);
       setMessage("Success! Redirecting...");
-      // The useEffect hook will handle the redirect
+
     } catch (err) {
-      if (err.response && err.response.status === 422) {
-        // Handle Laravel's validation errors
+      // Check for 404 on the csrf-cookie route
+      if (err.response && err.response.config.url.includes('sanctum/csrf-cookie')) {
+          setMessage("Error: Could not connect to the authentication server. Please check the API URL.");
+      } else if (err.response && err.response.status === 419) {
+        setMessage("Your session has expired. Please refresh the page and try again.");
+      } else if (err.response && err.response.status === 422) {
         const errors = err.response.data.errors;
         const errorMessages = Object.values(errors).flat().join(' ');
         setMessage(errorMessages);
       } else if (err.response && err.response.data && err.response.data.message) {
-        // Handle other specific API error messages
         setMessage(err.response.data.message);
       } else {
-        // Generic fallback
         setMessage("An unexpected error occurred. Please try again.");
       }
     } finally {
@@ -52,7 +60,6 @@ const AuthPage = () => {
     }
   };
 
-  // Render nothing while the context is checking for an existing session
   if (authLoading || user) {
     return null;
   }
