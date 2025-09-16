@@ -5,6 +5,7 @@ import axios from "axios";
 // and use it as the base for all API requests.
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
+  withCredentials: true,
 });
 
 // Use an interceptor to dynamically add the Authorization header to every request
