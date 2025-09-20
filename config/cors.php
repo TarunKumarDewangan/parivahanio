@@ -21,7 +21,10 @@ return [
     'allowed_origins' => [
         'http://localhost:5173',
         'http://127.0.0.1:5173',
-        'https://rtodatahub.in', // Keep your production URL here
+        'https://rtodatahub.in',
+        'https://www.rtodatahub.in',
+        'https://api.rtodatahub.in',
+        //  // Keep your production URL here
     ],
 
     'allowed_origins_patterns' => [],
