@@ -1,14 +1,21 @@
 <?php
 
 return [
+
     /*
     |--------------------------------------------------------------------------
-    | CORS Configuration
+    | Cross-Origin Resource Sharing (CORS) Configuration
     |--------------------------------------------------------------------------
-    | This file is configured for a full API backend.
+    | This is the final and correct configuration for your SPA.
     */
 
-    'paths' => ['api/*'], // Apply CORS to all routes starting with 'api/'
+    'paths' => [
+        'api/*',
+        'login',
+        'register',
+        'logout',
+        'sanctum/csrf-cookie'
+    ],
 
     'allowed_methods' => ['*'],
 
@@ -23,4 +30,5 @@ return [
     'max_age' => 0,
 
     'supports_credentials' => true,
+
 ];
