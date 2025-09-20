@@ -3,29 +3,16 @@
 return [
     /*
     |--------------------------------------------------------------------------
-    | Cross-Origin Resource Sharing (CORS) Configuration
+    | CORS Configuration
     |--------------------------------------------------------------------------
+    | This file is configured for a full API backend.
     */
 
-    // ✅ FINAL FIX: Add 'login', 'register', and 'logout' to the paths array.
-    'paths' => [
-        'api/*',
-        'sanctum/csrf-cookie',
-        'login',
-        'register',
-        'logout'
-    ],
+    'paths' => ['api/*'], // Apply CORS to all routes starting with 'api/'
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => [
-        'http://localhost:5173',
-        'http://127.0.0.1:5173',
-        'https://rtodatahub.in',
-        'https://www.rtodatahub.in',
-        'https://api.rtodatahub.in',
-        //  // Keep your production URL here
-    ],
+    'allowed_origins' => explode(',', env('CORS_ALLOWED_ORIGINS', 'http://localhost:5173')),
 
     'allowed_origins_patterns' => [],
 

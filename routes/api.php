@@ -25,40 +25,40 @@ use App\Http\Controllers\Api\WorkTakenController;
 |--------------------------------------------------------------------------
 | API Routes
 |--------------------------------------------------------------------------
-|
-| These routes are for authenticated users and are protected by Sanctum.
-| The session is established via the routes in web.php.
-|
 */
 
-Route::middleware(['auth:sanctum'])->group(function () {
+// --- PUBLIC AUTHENTICATION ROUTES ---
+Route::post('/login', [AuthController::class, 'login']);
+Route::post('/register', [AuthController::class, 'register']);
 
-    // --- Core Features ---
+// --- PROTECTED ROUTES (Require Authentication) ---
+Route::middleware('auth:sanctum')->group(function () {
+    // Core User Features
+    Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
     Route::put('/me/password', [AuthController::class, 'updatePassword']);
+
+    // Admin Features
     Route::get('/dashboard/stats', [DashboardController::class, 'getStats'])->middleware('role:admin');
     Route::apiResource('groups', GroupController::class);
     Route::apiResource('users', UserController::class);
 
-    // --- Application Features ---
+    // Application Features
     Route::apiResource('licenses', LearnerLicenseController::class);
     Route::apiResource('driving-licenses', DrivingLicenseController::class);
     Route::apiResource('citizens', CitizenController::class);
-
-    // --- Vehicle & Document Features ---
-    Route::apiResource('citizens.vehicles', VehicleController::class)->except(['show', 'update', 'destroy']);
-    Route::apiResource('vehicles', VehicleController::class)->only(['show', 'update', 'destroy']);
-    Route::get('vehicles/{vehicle}/details', [VehicleController::class, 'getDetails']);
-    Route::apiResource('vehicles.fitness_certificates', FitnessCertificateController::class);
-    Route::apiResource('vehicles.insurances', InsuranceController::class);
-    Route::apiResource('vehicles.permits', PermitController::class);
-    Route::apiResource('vehicles.puccs', PuccController::class);
-    Route::apiResource('vehicles.slds', SldController::class);
-    Route::apiResource('vehicles.vehicle_taxes', VehicleTaxController::class);
-    Route::apiResource('vehicles.vltds', VltdController::class);
-
-    // --- Work Taken & Report Features ---
     Route::apiResource('work-taken', WorkTakenController::class);
     Route::get('reports/expiring-documents', [ReportController::class, 'expiringDocuments']);
     Route::get('global-search', [GlobalSearchController::class, 'search']);
+
+    // Vehicle & Document Features
+    Route::apiResource('citizens.vehicles', VehicleController::class)->shallow();
+    Route::get('vehicles/{vehicle}/details', [VehicleController::class, 'getDetails']);
+    Route::apiResource('vehicles.fitness_certificates', FitnessCertificateController::class)->shallow();
+    Route::apiResource('vehicles.insurances', InsuranceController::class)->shallow();
+    Route::apiResource('vehicles.permits', PermitController::class)->shallow();
+    Route::apiResource('vehicles.puccs', PuccController::class)->shallow();
+    Route::apiResource('vehicles.slds', SldController::class)->shallow();
+    Route::apiResource('vehicles.vehicle_taxes', VehicleTaxController::class)->shallow();
+    Route::apiResource('vehicles.vltds', VltdController::class)->shallow();
 });
