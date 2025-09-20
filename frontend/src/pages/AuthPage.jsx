@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, Form, Button } from "react-bootstrap";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/AuthContext.jsx";
 import apiClient from "../api/axiosConfig";
-import axios from "axios"; // ✅ 1. Import axios directly for the special call
+import axios from "axios";
 
 const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -14,11 +14,9 @@ const AuthPage = () => {
   const { user, login, loading: authLoading } = useAuth();
 
   useEffect(() => {
-    if (authLoading) return;
-    if (user) {
-      if (user.role === "admin") navigate("/admin");
-      else if (user.role === "group_manager") navigate("/manager");
-      else navigate("/user");
+    if (!authLoading && user) {
+      const targetRoute = user.role === 'admin' ? '/admin' : '/user';
+      navigate(targetRoute);
     }
   }, [user, authLoading, navigate]);
 
@@ -29,40 +27,31 @@ const AuthPage = () => {
     setLoading(true);
 
     try {
-      // ✅ 2. Use a direct axios call to the FULL, CORRECT URL for the handshake.
-      // This bypasses the apiClient's baseURL which adds the extra '/api'.
-      await axios.get(`${import.meta.env.VITE_API_BASE_URL.replace('/api', '')}/sanctum/csrf-cookie`, {
-          withCredentials: true,
-      });
+      const rootURL = apiClient.defaults.baseURL.replace('/api', '');
+      await axios.get(`${rootURL}/sanctum/csrf-cookie`, { withCredentials: true });
 
-      // Now, proceed with the login/register request using the normal apiClient
-      const { data } = await apiClient.post(endpoint, form);
-      login(data.user, data.token);
-      setMessage("Success! Redirecting...");
+      // ✅ FINAL FIX: Use a direct axios call to the correct root endpoint for login/register
+      const { data } = await axios.post(`${rootURL}${endpoint}`, form, { withCredentials: true });
+
+      login(data.user);
 
     } catch (err) {
-      // Check for 404 on the csrf-cookie route
-      if (err.response && err.response.config.url.includes('sanctum/csrf-cookie')) {
-          setMessage("Error: Could not connect to the authentication server. Please check the API URL.");
-      } else if (err.response && err.response.status === 419) {
+      if (err.response?.status === 404) {
+        setMessage("Login endpoint not found. Please check server configuration.");
+      } else if (err.response?.status === 419) {
         setMessage("Your session has expired. Please refresh the page and try again.");
-      } else if (err.response && err.response.status === 422) {
+      } else if (err.response?.status === 422) {
         const errors = err.response.data.errors;
-        const errorMessages = Object.values(errors).flat().join(' ');
-        setMessage(errorMessages);
-      } else if (err.response && err.response.data && err.response.data.message) {
-        setMessage(err.response.data.message);
+        setMessage(Object.values(errors).flat().join(' '));
       } else {
         setMessage("An unexpected error occurred. Please try again.");
       }
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
   };
 
-  if (authLoading || user) {
-    return null;
-  }
+  if (authLoading || user) return null;
 
   return (
     <div className="d-flex align-items-center justify-content-center vh-100 bg-light">
@@ -74,34 +63,16 @@ const AuthPage = () => {
             {!isLogin && (
               <Form.Group className="mb-2">
                 <Form.Label>Name</Form.Label>
-                <Form.Control
-                  type="text"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  required={!isLogin}
-                  disabled={loading}
-                />
+                <Form.Control type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required={!isLogin} disabled={loading}/>
               </Form.Group>
             )}
             <Form.Group className="mb-2">
               <Form.Label>Phone</Form.Label>
-              <Form.Control
-                type="text"
-                value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                required
-                disabled={loading}
-              />
+              <Form.Control type="text" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} required disabled={loading}/>
             </Form.Group>
             <Form.Group className="mb-2">
               <Form.Label>Password</Form.Label>
-              <Form.Control
-                type="password"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                required
-                disabled={loading}
-              />
+              <Form.Control type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required disabled={loading}/>
             </Form.Group>
             <Button type="submit" className="w-100 mt-2" variant="primary" disabled={loading}>
               {loading ? (isLogin ? 'Logging in...' : 'Registering...') : (isLogin ? "Login" : "Register")}
@@ -109,9 +80,9 @@ const AuthPage = () => {
           </Form>
           <div className="text-center mt-3">
             {isLogin ? (
-              <p>Need an account?{" "}<span style={{ cursor: "pointer", color: "blue" }} onClick={() => setIsLogin(false)}>Register</span></p>
+              <p>Need an account? <span style={{ cursor: "pointer", color: "blue" }} onClick={() => setIsLogin(false)}>Register</span></p>
             ) : (
-              <p>Already have an account?{" "}<span style={{ cursor: "pointer", color: "blue" }} onClick={() => setIsLogin(true)}>Login</span></p>
+              <p>Already have an account? <span style={{ cursor: "pointer", color: "blue" }} onClick={() => setIsLogin(true)}>Login</span></p>
             )}
           </div>
         </Card.Body>

@@ -5,48 +5,26 @@ const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true); // To handle initial auth check
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      setLoading(false);
-      return;
-    }
-
-    // Token exists, so we verify it by fetching the user profile
     apiClient
       .get("/me")
-      .then((response) => {
-        setUser(response.data.user);
-      })
-      .catch(() => {
-        // If token is invalid or expired, clear it
-        localStorage.removeItem("token");
-        setUser(null);
-      })
-      .finally(() => {
-        // Auth check is complete
-        setLoading(false);
-      });
+      .catch(() => setUser(null))
+      .finally(() => setLoading(false));
   }, []);
 
-  const login = (userData, token) => {
-    localStorage.setItem("token", token);
-    setUser(userData);
-  };
+  const login = (userData) => setUser(userData);
 
   const logout = () => {
-    // Invalidate token on the server
-    apiClient.post('/logout').catch(() => {});
-    localStorage.removeItem("token");
-    setUser(null);
+    apiClient.post('/logout').finally(() => {
+      setUser(null);
+      window.location.href = '/';
+    });
   };
 
-  // The value provided to consuming components
   const value = { user, login, logout, loading };
 
-  // Render children only after the initial loading is complete
   return (
     <AuthContext.Provider value={value}>
       {!loading && children}
@@ -54,7 +32,4 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-// Custom hook to easily access the auth context in any component
-export const useAuth = () => {
-  return useContext(AuthContext);
-};
+export const useAuth = () => useContext(AuthContext);
