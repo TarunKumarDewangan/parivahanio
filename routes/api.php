@@ -25,25 +25,27 @@ use App\Http\Controllers\Api\WorkTakenController;
 |--------------------------------------------------------------------------
 | API Routes
 |--------------------------------------------------------------------------
+|
+| These routes are loaded by the RouteServiceProvider within a group which
+| is assigned the "api" middleware group. Enjoy building your API!
+| All routes here are automatically prefixed with /api.
+|
 */
 
-// --- PUBLIC AUTHENTICATION ROUTES ---
-Route::post('/login', [AuthController::class, 'login']);
-Route::post('/register', [AuthController::class, 'register']);
-
-// --- PROTECTED ROUTES (Require Authentication) ---
+// --- PROTECTED ROUTES (Require Authentication via Sanctum) ---
 Route::middleware('auth:sanctum')->group(function () {
-    // Core User Features
+
+    // Core User & Auth Features
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
     Route::put('/me/password', [AuthController::class, 'updatePassword']);
 
-    // Admin Features
+    // Admin-Specific Features
     Route::get('/dashboard/stats', [DashboardController::class, 'getStats'])->middleware('role:admin');
     Route::apiResource('groups', GroupController::class);
     Route::apiResource('users', UserController::class);
 
-    // Application Features
+    // General Application Features
     Route::apiResource('licenses', LearnerLicenseController::class);
     Route::apiResource('driving-licenses', DrivingLicenseController::class);
     Route::apiResource('citizens', CitizenController::class);
@@ -51,7 +53,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('reports/expiring-documents', [ReportController::class, 'expiringDocuments']);
     Route::get('global-search', [GlobalSearchController::class, 'search']);
 
-    // Vehicle & Document Features
+    // Nested Vehicle & Document Features
+    // Note: ->shallow() simplifies document routes to e.g., /insurances/{id} instead of /vehicles/{vid}/insurances/{id}
     Route::apiResource('citizens.vehicles', VehicleController::class)->shallow();
     Route::get('vehicles/{vehicle}/details', [VehicleController::class, 'getDetails']);
     Route::apiResource('vehicles.fitness_certificates', FitnessCertificateController::class)->shallow();

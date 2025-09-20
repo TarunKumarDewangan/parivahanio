@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, Form, Button } from "react-bootstrap";
 import { useAuth } from "../context/AuthContext.jsx";
-import apiClient from "../api/axiosConfig";
 import axios from "axios";
 
 const AuthPage = () => {
@@ -15,8 +14,7 @@ const AuthPage = () => {
 
   useEffect(() => {
     if (!authLoading && user) {
-      const targetRoute = user.role === 'admin' ? '/admin' : '/user';
-      navigate(targetRoute);
+      navigate(user.role === 'admin' ? '/admin' : '/user');
     }
   }, [user, authLoading, navigate]);
 
@@ -27,24 +25,32 @@ const AuthPage = () => {
     setLoading(true);
 
     try {
-      const rootURL = apiClient.defaults.baseURL.replace('/api', '');
+      // Get the root URL directly from the environment variable
+      const rootURL = import.meta.env.VITE_API_BASE_URL;
+
+      // Step 1: Get the security cookie from the correct /sanctum/csrf-cookie endpoint
       await axios.get(`${rootURL}/sanctum/csrf-cookie`, { withCredentials: true });
 
-      // ✅ FINAL FIX: Use a direct axios call to the correct root endpoint for login/register
+      // Step 2: Post the login/register data to the correct endpoint
       const { data } = await axios.post(`${rootURL}${endpoint}`, form, { withCredentials: true });
 
       login(data.user);
 
     } catch (err) {
-      if (err.response?.status === 404) {
-        setMessage("Login endpoint not found. Please check server configuration.");
-      } else if (err.response?.status === 419) {
-        setMessage("Your session has expired. Please refresh the page and try again.");
-      } else if (err.response?.status === 422) {
-        const errors = err.response.data.errors;
-        setMessage(Object.values(errors).flat().join(' '));
+      if (err.response) {
+        if (err.response.status === 422 && err.response.data.errors) {
+          const errors = err.response.data.errors;
+          setMessage(Object.values(errors).flat().join(' '));
+        } else if (err.response.data && err.response.data.message) {
+          setMessage(err.response.data.message);
+        } else if (err.response.status === 404) {
+          setMessage(`Error: The route was not found. Please check your backend routes.`);
+        }
+        else {
+          setMessage("An unexpected server error occurred. Please try again.");
+        }
       } else {
-        setMessage("An unexpected error occurred. Please try again.");
+        setMessage("Could not connect to the server. Please check your network connection.");
       }
     } finally {
       setLoading(false);
